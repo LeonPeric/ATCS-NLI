@@ -10,11 +10,10 @@ class NeuralNet(nn.Module):
     Neural net, which takes an encoder and passes the outputs through Linear layers
     """
 
-    def __init__(self, encoder, input_dim=1200):
+    def __init__(self, encoder, input_dim=4096):
         super(NeuralNet, self).__init__()
         self.encoder = encoder
-        # TODO: MAKE SURE TO CHECK HIDDEN DIM SIZE IN PAPER
-        self.layers = nn.Sequential(nn.Linear(input_dim, 512), nn.Linear(512, 3))
+        self.layers = nn.Sequential(nn.Linear(input_dim * 4, 512), nn.Linear(512, 3))
 
     def forward(self, premise, hypothesis):
         """
