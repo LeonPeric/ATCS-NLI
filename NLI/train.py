@@ -1,21 +1,20 @@
 "Training loop file"
 
 import torch
-from eval import eval_model
-from utils import process_sentence, create_vocab
 from tqdm import tqdm
 import os
 import numpy as np
 import pickle
-from dataset import SNLIDataLoader, load_data
 from torch.utils.data import DataLoader
+import argparse
+from torch.utils.tensorboard.writer import SummaryWriter
 
+from dataset import SNLIDataLoader, load_data
 import model
 import torch
 import train
 import eval
-
-import argparse
+import utils
 
 
 def train_model(model, device, vocab, dataloader_train, dataloader_test, model_name):
@@ -34,8 +33,11 @@ def train_model(model, device, vocab, dataloader_train, dataloader_test, model_n
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
     loss_module = torch.nn.CrossEntropyLoss()
 
+    writer = SummaryWriter(f"./runs/{model_name}")
+
     # from the paper
     while optimizer.param_groups[0]["lr"] >= 10**-5:
+        writer.add_scalar("Learning rate", optimizer.param_groups[0]["lr"], epoch)
         model.train()
         print(epoch)
         if epoch >= 1:
@@ -45,7 +47,7 @@ def train_model(model, device, vocab, dataloader_train, dataloader_test, model_n
         for premises, hypotheses, labels in tqdm(
             dataloader_train, total=len(dataloader_train)
         ):
-            premises, hypotheses, labels = process_sentence(
+            premises, hypotheses, labels = utils.process_sentence(
                 premises, hypotheses, labels, vocab, device
             )
             premises = premises.permute(2, 1, 0)
@@ -61,11 +63,13 @@ def train_model(model, device, vocab, dataloader_train, dataloader_test, model_n
             optimizer.step()
 
         print(f"Training loss is: {train_loss}")
+        writer.add_scalar("Training loss", train_loss, epoch)
         losses.append(train_loss)
         train_loss = 0
 
-        test_accuracy = eval_model(model, dataloader_test, device, vocab)[-1]
+        test_accuracy = eval.eval_model(model, dataloader_test, device, vocab)[-1]
         print(f"Test accuracy is: {test_accuracy}")
+        writer.add_scalar("Test accuracy", test_accuracy, epoch)
 
         if len(test_accuracies) == 0:
             test_accuracies.append(test_accuracy)
@@ -77,13 +81,12 @@ def train_model(model, device, vocab, dataloader_train, dataloader_test, model_n
         if test_accuracy > best_eval:
             best_eval = test_accuracy
             path = f"models/{model_name}.pt"
-            checkpoint = {
-                "state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-            }
-            torch.save(checkpoint, path)
+            torch.save(model.state_dict(), path)
         test_accuracies.append(test_accuracy)
         epoch += 1
+
+    writer.flush()
+    writer.close()
 
 
 def main(args):
@@ -109,7 +112,7 @@ def main(args):
         with open(dataset_path + "vocab.pickle", "rb") as f:
             vocab = pickle.load(f)
     else:
-        vocab, vectors = create_vocab()
+        vocab, vectors = utils.create_vocab()
         vectors = torch.Tensor(vectors)
 
     print("Load dataset")
@@ -118,10 +121,10 @@ def main(args):
 
     print("Create dataloaders")
     dataloader_train = DataLoader(
-        SNLIDataLoader(datasets["train"]), shuffle=True, batch_size=64
+        SNLIDataLoader(datasets["train"]), shuffle=True, batch_size=64, pin_memory=False
     )
     dataloader_test = DataLoader(
-        SNLIDataLoader(datasets["test"]), shuffle=True, batch_size=64
+        SNLIDataLoader(datasets["test"]), shuffle=True, batch_size=64, pin_memory=False
     )
 
     print("Creating model")
@@ -130,23 +133,23 @@ def main(args):
         net = model.NeuralNet(base, 300).to(device)
 
     if args.model == "LSTM":
-        lstm = model.LSTM(vectors).to(device)
+        lstm = model.LSTM(vectors, 2048).to(device)
         net = model.NeuralNet(lstm, 2048).to(device)
 
     if args.model == "BILSTM":
-        bi_lstm = model.BiLSTM(vectors).to(device)
-        net = model.NeuralNet(bi_lstm, True, 4096).to(device)
+        bi_lstm = model.BiLSTM(vectors, 4096, False).to(device)
+        net = model.NeuralNet(bi_lstm, 4096).to(device)
 
     if args.model == "BILSTM_MAX":
-        bi_lstm = model.BiLSTM(vectors, True).to(device)
-        net = model.NeuralNet(bi_lstm, True, 4096).to(device)
+        bi_lstm = model.BiLSTM(vectors, 4096, True).to(device)
+        net = model.NeuralNet(bi_lstm, 4096).to(device)
 
     print("The choosen model is: ")
     print(net)
 
     if args.checkpoint_path:
         print("Found already trained model")
-        model.load_state_dict(torch.load(args.checkpoint_path))
+        net.load_state_dict(torch.load(args.checkpoint_path))
     else:
         print("Start training now")
         train.train_model(
@@ -154,12 +157,15 @@ def main(args):
         )
 
     print("Validating now on validation test")
-    model.load_state_dict(torch.load(f"models/{args.model}.pt"))
+    net.load_state_dict(torch.load(f"models/{args.model}.pt"))
     dataloader_validation = DataLoader(
-        SNLIDataLoader(datasets["validation"]), shuffle=True, batch_size=64
+        SNLIDataLoader(datasets["validation"]),
+        shuffle=True,
+        batch_size=64,
+        pin_memory=False,
     )
 
-    validation_accuracy = eval_model(model, dataloader_validation, device, vocab)[-1]
+    validation_accuracy = eval.eval_model(net, dataloader_validation, device, vocab)[-1]
     print(f"Validation accuracy is: {validation_accuracy}")
 
 

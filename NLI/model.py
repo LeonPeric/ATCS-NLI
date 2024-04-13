@@ -57,14 +57,14 @@ class LSTM(nn.Module):
     Regular LSTM which is LTR and contains one layer. Returns value of last hidden layer
     """
 
-    def __init__(self, embedding_matrix):
+    def __init__(self, embedding_matrix, hidden_size):
         super(LSTM, self).__init__()
 
         self.embedding = nn.Embedding.from_pretrained(embedding_matrix, freeze=True)
 
         self.lstm = nn.LSTM(
             input_size=300,
-            hidden_size=300,
+            hidden_size=hidden_size,
             num_layers=1,
             batch_first=True,
             bidirectional=False,
@@ -99,14 +99,15 @@ class BiLSTM(nn.Module):
         As well as maxpooling the embeddings
     """
 
-    def __init__(self, embedding_matrix, max_pooling=False):
+    def __init__(self, embedding_matrix, hidden_size=4096, max_pooling=False):
         super(BiLSTM, self).__init__()
 
         self.embedding = nn.Embedding.from_pretrained(embedding_matrix, freeze=True)
 
+        # TODO: should the embedding be 4096 * 2 or / 2 since we take a concat?
         self.lstm = nn.LSTM(
             input_size=300,
-            hidden_size=300,
+            hidden_size=hidden_size // 2,
             num_layers=1,
             batch_first=True,
             bidirectional=True,
