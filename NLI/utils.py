@@ -6,7 +6,7 @@ from collections import Counter, OrderedDict
 from dataset import load_data
 from nltk import tokenize
 import numpy as np
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import pickle
 import torch
 
@@ -84,7 +84,7 @@ def create_vocab():
     features = {}
     total_lines = 2196019
     print("reading embeddings")
-    with open("..\\data\\glove.840B.300d.txt", encoding="utf-8") as f:
+    with open("data\\glove.840B.300d.txt", encoding="utf-8") as f:
         for _, line in tqdm(enumerate(f), total=total_lines):
             elements = line.split(" ")
             token = elements[0]
@@ -109,9 +109,9 @@ def create_vocab():
 
     vectors = np.stack(vectors, axis=0)
     print(f"Matrix Shape: {vectors.shape}")
-    np.savetxt("../data/embeddings.txt", vectors)
+    np.savetxt("data/embeddings.txt", vectors)
 
-    with open("../data/vocab.pickle", "wb") as f:
+    with open("data/vocab.pickle", "wb") as f:
         pickle.dump(v, f)
 
     return v, vectors

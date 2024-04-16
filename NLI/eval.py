@@ -6,13 +6,14 @@ from utils import process_sentence
 import torch
 
 
-def eval_model(model, data, device, vocab) -> tuple:
+def eval_model(model, data, device, vocab, loss_function) -> tuple:
     """
     Evaluate a certain model on a certain dataset, calculates accuracy
     """
 
     correct = 0
     total = 0
+    loss = 0
     model.eval()
 
     for premises, hypotheses, labels in data:
@@ -32,4 +33,8 @@ def eval_model(model, data, device, vocab) -> tuple:
         correct += (predictions == labels.view(-1)).sum().item()
         total += labels.size(0)
 
-    return correct, total, correct / float(total)
+        if loss_function is not None:
+            item_loss = loss_function(logits, labels)
+            loss += item_loss.item()
+
+    return loss / len(data), (correct / float(total))

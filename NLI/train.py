@@ -17,15 +17,17 @@ import eval
 import utils
 
 
-def train_model(model, device, vocab, dataloader_train, dataloader_test, model_name):
+def train_model(
+    model, device, vocab, dataloader_train, dataloader_validation, model_name
+):
     """
     The general training loop file. Runs till the learning rate is lower than 10**-5.
     As well as follows all other hyperparameters from the paper.
-    Saves the best running model on the test set
+    Saves the best running model on the validation set
     """
 
     epoch = 0
-    test_accuracies = []
+    validation_accuracies = []
     train_loss = 0
     best_eval = 0
     losses = []
@@ -63,26 +65,30 @@ def train_model(model, device, vocab, dataloader_train, dataloader_test, model_n
             optimizer.step()
 
         print(f"Training loss is: {train_loss}")
-        writer.add_scalar("Training loss", train_loss, epoch)
+        writer.add_scalar("Loss/training", train_loss / len(dataloader_train), epoch)
         losses.append(train_loss)
         train_loss = 0
 
-        test_accuracy = eval.eval_model(model, dataloader_test, device, vocab)[-1]
-        print(f"Test accuracy is: {test_accuracy}")
-        writer.add_scalar("Test accuracy", test_accuracy, epoch)
+        validation_loss, validation_accuracy = eval.eval_model(
+            model, dataloader_validation, device, vocab, loss_module
+        )
+        writer.add_scalar("Loss/validation", validation_loss, epoch)
+        writer.add_scalar("Loss/difference", train_loss - validation_loss, epoch)
+        print(f"validation accuracy is: {validation_accuracy}")
+        writer.add_scalar("Validation accuracy", validation_accuracy, epoch)
 
-        if len(test_accuracies) == 0:
-            test_accuracies.append(test_accuracy)
+        if len(validation_accuracies) == 0:
+            validation_accuracies.append(validation_accuracy)
 
-        # take a fith of the learning rate if test acc does not improve
-        if test_accuracy < test_accuracies[-1]:
+        # take a fith of the learning rate if validation acc does not improve
+        if validation_accuracy < validation_accuracies[-1]:
             optimizer.param_groups[0]["lr"] *= 0.2
 
-        if test_accuracy > best_eval:
-            best_eval = test_accuracy
+        if validation_accuracy > best_eval:
+            best_eval = validation_accuracy
             path = f"models/{model_name}.pt"
             torch.save(model.state_dict(), path)
-        test_accuracies.append(test_accuracy)
+        validation_accuracies.append(validation_accuracy)
         epoch += 1
 
     writer.flush()
@@ -90,8 +96,6 @@ def train_model(model, device, vocab, dataloader_train, dataloader_test, model_n
 
 
 def main(args):
-    print(os.getcwd())
-    print(args)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     torch.manual_seed(42)
@@ -123,8 +127,11 @@ def main(args):
     dataloader_train = DataLoader(
         SNLIDataLoader(datasets["train"]), shuffle=True, batch_size=64, pin_memory=False
     )
-    dataloader_test = DataLoader(
-        SNLIDataLoader(datasets["test"]), shuffle=True, batch_size=64, pin_memory=False
+    dataloader_validation = DataLoader(
+        SNLIDataLoader(datasets["validation"]),
+        shuffle=True,
+        batch_size=64,
+        pin_memory=False,
     )
 
     print("Creating model")
@@ -153,20 +160,22 @@ def main(args):
     else:
         print("Start training now")
         train.train_model(
-            net, device, vocab, dataloader_train, dataloader_test, args.model
+            net, device, vocab, dataloader_train, dataloader_validation, args.model
         )
 
-    print("Validating now on validation test")
+    print("Testing now on test dataset")
     net.load_state_dict(torch.load(f"models/{args.model}.pt"))
-    dataloader_validation = DataLoader(
-        SNLIDataLoader(datasets["validation"]),
+    dataloader_test = DataLoader(
+        SNLIDataLoader(datasets["test"]),
         shuffle=True,
         batch_size=64,
         pin_memory=False,
     )
 
-    validation_accuracy = eval.eval_model(net, dataloader_validation, device, vocab)[-1]
-    print(f"Validation accuracy is: {validation_accuracy}")
+    test_accuracy = eval.eval_model(
+        net, dataloader_test, device, vocab, loss_function=None
+    )[-1]
+    print(f"Validation accuracy is: {test_accuracy}")
 
 
 if __name__ == "__main__":

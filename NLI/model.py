@@ -13,7 +13,9 @@ class NeuralNet(nn.Module):
     def __init__(self, encoder, input_dim=4096):
         super(NeuralNet, self).__init__()
         self.encoder = encoder
-        self.layers = nn.Sequential(nn.Linear(input_dim * 4, 512), nn.Linear(512, 3))
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim * 4, 512), nn.Linear(512, 512), nn.Linear(512, 3)
+        )
 
     def forward(self, premise, hypothesis):
         """
@@ -104,7 +106,6 @@ class BiLSTM(nn.Module):
 
         self.embedding = nn.Embedding.from_pretrained(embedding_matrix, freeze=True)
 
-        # TODO: should the embedding be 4096 * 2 or / 2 since we take a concat?
         self.lstm = nn.LSTM(
             input_size=300,
             hidden_size=hidden_size // 2,
