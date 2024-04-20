@@ -9,6 +9,7 @@ import numpy as np
 from tqdm import tqdm
 import pickle
 import torch
+from torch.nn.utils.rnn import pad_sequence
 
 
 class OrderedCounter(Counter, OrderedDict):
@@ -137,3 +138,20 @@ def process_sentence(premises, hypotheses, labels, vocab, device):
     y = y.to(device)
 
     return premises, hypotheses, y
+
+
+def process_senteval(vocab, sentences):
+    sentences = [tokenize.word_tokenize(" ".join(row).lower()) for row in sentences]
+
+    max_length = max([len(sentence) for sentence in sentences])
+    # padded_sentences = []
+    # for i in range(len(sentences)):
+    #     sentences[i] + ["<pad>" for i in range(max_length - len(sentences[i]))]
+    tokenized = []
+    for sent in sentences:
+        temp = torch.tensor([vocab.w2i.get(token, 0) for token in sent])
+        tokenized.append(temp)
+
+    padded = pad_sequence(tokenized, batch_first=True, padding_value=1)
+    # tokenized = torch.LongTensor([tokenized])
+    return padded

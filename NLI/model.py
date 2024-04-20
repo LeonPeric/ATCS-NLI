@@ -51,7 +51,10 @@ class Baseline(nn.Module):
         Run model with specific premises and hypothesis
         """
         token_ids = torch.squeeze(token_ids)
-        return self.embedding(token_ids).mean(1)
+        embeddings = self.embedding(token_ids)
+        valid_tokens = (embeddings != 1).sum(dim=1)
+        return torch.sum(embeddings, dim=1) / valid_tokens
+        # return self.embedding(token_ids).mean(1)
 
 
 class LSTM(nn.Module):
