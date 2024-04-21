@@ -157,12 +157,13 @@ def main(args):
     ]
     print("Start eval on senteval")
     outputs = se.eval(tasks)
+    print(outputs)
 
-    tasks_with_devacc = [task for task in tasks if "devacc" in outputs[task]]
-    macro_score = np.mean([outputs[task]["devacc"] for task in tasks_with_devacc])
+    dev_acc_tasks = [task for task in tasks if "devacc" in outputs[task]]
+    macro_score = np.mean([outputs[t]["devacc"] for t in dev_acc_tasks])
     micro_score = np.sum(
-        [outputs[task]["ndev"] * outputs[task]["devacc"] for task in tasks_with_devacc]
-    ) / np.sum([outputs[task]["ndev"] for task in tasks_with_devacc])
+        [outputs[t]["ndev"] * outputs[t]["devacc"] for t in dev_acc_tasks]
+    ) / np.sum([outputs[t]["ndev"] for t in dev_acc_tasks])
 
     print(macro_score)
     print(micro_score)

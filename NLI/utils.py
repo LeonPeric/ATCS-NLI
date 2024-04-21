@@ -63,7 +63,7 @@ class Vocabulary:
             self.add_token(tok)
 
 
-def create_vocab():
+def create_vocab(datapath="data/"):
     """
     Generates the whole vocab
     Also partly copied from NLP1 course
@@ -85,7 +85,7 @@ def create_vocab():
     features = {}
     total_lines = 2196019
     print("reading embeddings")
-    with open("data\\glove.840B.300d.txt", encoding="utf-8") as f:
+    with open(datapath + "glove.840B.300d.txt", encoding="utf-8") as f:
         for _, line in tqdm(enumerate(f), total=total_lines):
             elements = line.split(" ")
             token = elements[0]
@@ -110,9 +110,9 @@ def create_vocab():
 
     vectors = np.stack(vectors, axis=0)
     print(f"Matrix Shape: {vectors.shape}")
-    np.savetxt("data/embeddings.txt", vectors)
+    np.savetxt(datapath + "embeddings.txt", vectors)
 
-    with open("data/vocab.pickle", "wb") as f:
+    with open(datapath + "vocab.pickle", "wb") as f:
         pickle.dump(v, f)
 
     return v, vectors
