@@ -10,6 +10,7 @@ import pickle
 import model
 import senteval
 import argparse
+import logging
 
 
 def eval_model(model, data, device, vocab, loss_function) -> tuple:
@@ -47,7 +48,7 @@ def eval_model(model, data, device, vocab, loss_function) -> tuple:
 
 
 def batcher(params, batch):
-    batch = [sent if sent != [] else ["."] for sent in batch]
+    batch = [sent if len(sent) > 0 else ["."] for sent in batch]
     padded_indices = process_senteval(params.vocab, batch).to(params.device)
     embeddings = params.net.encoder(padded_indices)
     return embeddings.detach().cpu().numpy()
@@ -96,33 +97,40 @@ def main(args):
     params = dict()
 
     params["args"] = args
-    params["kfold"] = 5
+    params["kfold"] = 10
     params["device"] = args.device
     params["model"] = args.model
     params["net"] = net
     params["task_path"] = "SentEval/data/"
     params["usepytorch"] = True
     params["vocab"] = vocab
-    params["batch_size"] = 64
 
     params["classifier"] = {
         "nhid": 0,
-        "optim": "rmsprop",
-        "batch_size": 128,
-        "tenacity": 3,
-        "epoch_size": 2,
+        "optim": "adam",
+        "batch_size": 64,
+        "tenacity": 5,
+        "epoch_size": 4,
     }
+
+    # params["classifier"] = {
+    #     "nhid": 0,
+    #     "optim": "rmsprop",
+    #     "batch_size": 128,
+    #     "tenacity": 3,
+    #     "epoch_size": 2,
+    # }
 
     se = senteval.engine.SE(params, batcher, None)
     tasks = [
-        # "MR",
-        # "CR",
-        "MPQA",  # THIS ONE GIVES A PROBLEM
-        # "SUBJ",
+        "MR",
+        "CR",
+        # "MPQA",  # THIS ONE GIVES A PROBLEM
+        "SUBJ",
         # "SST2",  # ALSO GIVES A PROBLEM
-        # "TREC",
-        # "MRPC",
-        # "SICKEntailment",
+        "TREC",
+        "MRPC",
+        "SICKEntailment",
         # "STS14",  # ALSO GIVES A PROBLEM
         # "SICKRelatedness",  # ALSO GIVES A PROBLEM
     ]
@@ -159,5 +167,11 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
     main(args)
