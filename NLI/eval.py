@@ -11,6 +11,8 @@ import model
 import senteval
 import argparse
 import logging
+from torch.utils.data import DataLoader
+from dataset import SNLIDataLoader, load_data
 
 
 def eval_model(model, data, device, vocab, loss_function) -> tuple:
@@ -96,6 +98,33 @@ def main(args):
     print(net)
     params = dict()
 
+    print("Evaluating on validation and test datasets")
+    datasets = load_data()
+
+    dataloader_validation = DataLoader(
+        SNLIDataLoader(datasets["validation"]),
+        shuffle=True,
+        batch_size=64,
+        pin_memory=False,
+    )
+
+    validation_accuracy = eval_model(
+        net, dataloader_validation, device, vocab, loss_function=None
+    )[-1]
+
+    dataloader_test = DataLoader(
+        SNLIDataLoader(datasets["test"]),
+        shuffle=True,
+        batch_size=64,
+        pin_memory=False,
+    )
+
+    test_accuracy = eval_model(net, dataloader_test, device, vocab, loss_function=None)[
+        -1
+    ]
+    print(f"Validation accuracy is: {validation_accuracy}")
+    print(f"Test accuracy is: {test_accuracy}")
+
     params["args"] = args
     params["kfold"] = 10
     params["device"] = args.device
@@ -112,14 +141,6 @@ def main(args):
         "tenacity": 5,
         "epoch_size": 4,
     }
-
-    # params["classifier"] = {
-    #     "nhid": 0,
-    #     "optim": "rmsprop",
-    #     "batch_size": 128,
-    #     "tenacity": 3,
-    #     "epoch_size": 2,
-    # }
 
     se = senteval.engine.SE(params, batcher, None)
     tasks = [

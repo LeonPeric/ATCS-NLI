@@ -175,7 +175,7 @@ def main(args):
     test_accuracy = eval.eval_model(
         net, dataloader_test, device, vocab, loss_function=None
     )[-1]
-    print(f"Validation accuracy is: {test_accuracy}")
+    print(f"Test accuracy is: {test_accuracy}")
 
 
 if __name__ == "__main__":
