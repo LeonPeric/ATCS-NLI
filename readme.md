@@ -1,12 +1,12 @@
 # ATCS Practical 1
 ## Structure 
-`data/` is the folder in which the vocab and embeddings will be stored.
-`models/` contains the pytorch files for the trained models.
-`NLI/` contains the source code for this project.
-`runs/` contains the tensorboards for the various models.
-`SentEval/` contains the senteval files and the data for it.
-`environment.yml` contains the conda env for this project.
-`NLI/results.ipynb` shows the final results as well as some analysis.
+- `data/` is the folder in which the vocab and embeddings will be stored.
+- `models/` contains the pytorch files for the trained models.
+- `NLI/` contains the source code for this project.
+- `runs/` contains the tensorboards for the various models.
+- `SentEval/` contains the senteval files and the data for it.
+- `environment.yml` contains the conda env for this project.
+- `NLI/results.ipynb` shows the final results as well as some analysis.
 
 ## Prepare project
 1. Make use of conda and paste the following command: `conda env create -f environment.yml` 
